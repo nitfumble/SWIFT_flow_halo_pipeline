@@ -10,6 +10,7 @@ Runs [SWIFT](https://github.com/SWIFTSIM/swiftsim) with different DM halo profil
 
 **Usage goals:** 
 Investigate the influence of baryonic mass ejections on the galactic DM halo. 
+
 In specific: The DM mass loss fraction due to the change in the overdensity radii.
 
 
