@@ -1,5 +1,5 @@
 # SWIFT_flow_halo_pipeline
-Runs SWIFT{https://github.com/SWIFTSIM/swiftsim} with different DM halo profiles initialisations. 
+Runs [SWIFT](https://github.com/SWIFTSIM/swiftsim) with different DM halo profiles initialisations. 
 
 ** Returns snapshots, plot options for: **
 - Angular momentum 
