@@ -1,0 +1,33 @@
+Welcome to the SWIFT PIPELINE for the simulation of different Dark Matter Halo profiles (NFW/King/Einasto/Hernquist). {NFWX is a WIP}
+
+Prerequisites:
+- Run this pipeline on a Linux PC.
+- Install the SWIFT software. (https://swift.dur.ac.uk/docs/index.html)
+
+How to run:
+- Open a terminal;
+- Use the change mode command for the swift_pipe.sh file with: 
+'chmod 777 swift_pipe' 
+
+- Run the simulation software with:
+'./swift_pipe.sh [INSERT PROFILE] [NUMBER OF PARTICLES] [PLOTTING]'
+
+Where:
+[INSERT PROFILE]        ∈ {NFW,King,Einasto,Hernquist}
+[NUMBER OF PARTICLES]   ∈ ℕ
+[PLOTTING]              ∈ {T,F}
+
+When [PLOTTING] = T | After the simulation runs the output snapshots are used to plot information on the evolution of the profile over the snapshots.
+You can specify for each of the options below if you want the plot these by entering (y) in the terminal when prompted the plotting question.
+
+The plot options are:
+-    Angular momentum over time; Fractional change in angular momentum in each axis.
+-    A GIF of the Density profiles and the mass vs. radius.
+-    A GIF of the Spatial distribution including the Overdensity radii and Density profiles with the bound percentages. Also, it plots the Kinetic & Potential energies and the number of particles over the simulation run.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Made by:
+B.J.H. Wolfs 
+Sterrewacht Leiden University
+wolfs@strw.leidenuniv.nl
+2022 - 2023
