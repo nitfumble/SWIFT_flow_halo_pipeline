@@ -1,5 +1,5 @@
 # SWIFT_flow_halo_pipeline
-Runs [SWIFT](https://github.com/SWIFTSIM/swiftsim) with different DM halo profiles initialisations using the [ICICLE](https://github.com/ndrakos/ICICLE) code in python. 
+Runs [SWIFT](https://github.com/SWIFTSIM/swiftsim) with different Dark Matter halo profiles initialisations using the [ICICLE](https://github.com/ndrakos/ICICLE) code in python. 
 
 **Returns snapshots, plot options over time for:**
 - Angular momentum 
