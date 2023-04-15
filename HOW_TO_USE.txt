@@ -14,8 +14,8 @@ How to run:
 './swift_pipe.sh [INSERT PROFILE] [NUMBER OF PARTICLES] [PLOTTING]'
 
 Where:
-[INSERT PROFILE]        ∈ {NFW,King,Einasto,Hernquist}
-[NUMBER OF PARTICLES]   ∈ ℕ    (Recommended: 1E4)
+[INSERT PROFILE]        ∈ {NFW,King,Einasto,Hernquist,NFWX (optional)} 
+[NUMBER OF PARTICLES]   ∈ ℕ    (Recommended: 1E5)
 [PLOTTING]              ∈ {T,F}     
 
 When [PLOTTING] = T | After the simulation runs the output snapshots are used to plot information on the evolution of the profile over the snapshots.
