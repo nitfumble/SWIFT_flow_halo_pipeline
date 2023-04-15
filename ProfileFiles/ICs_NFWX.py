@@ -82,6 +82,7 @@ def NFWX_P(R,params):
 ##Potential in an NFWX profile
 #########################################################
     #Make sure R is an array
+    # print('R:',R)
     if not isinstance(R, np.ndarray):
         R = np.array([R])
     
@@ -93,14 +94,17 @@ def NFWX_P(R,params):
     #Infinite part of integral (maxR to inf)
     def integrand(x,c,d):
         return NFWX_Mass(x,c,d)/(x*x)
+        
     Pend = integrate.quad(integrand,max(R),inf,args=(c,d))[0]
 
     #Integrate until maxR value
-    x = np.linspace(min(R),max(R),1e4)
-    y = integrand(x,c,d)
+    x = np.linspace(min(R),max(R),int(1e4))
+    # print('x:',x)
+    y = NFWX_Mass(x,c,d)/(x*x)
     Ps = integrate.cumtrapz(y,x,initial=0) #gives integral from rmin to r
     Ps = Ps[-1]-Ps #int_rmin^rmax - int_rmin^r = int_r^rmax
-    P = np.interp(R,x,Ps)+Pend
+    # print('Ps:',Ps)
+    P = np.interp(R.ravel(),x.ravel(),Ps.ravel())+Pend
     
     return P
 
@@ -117,7 +121,7 @@ def NFWX_DF(E,params):
     d = params['d']
     
     #Find rmin
-    P0 = NFWX_P(0.0,params)
+    P0 = NFWX_P(1E-5,params)
     def myfunc(R,E):
         if R<0: #so root finder doesn't find negative R
             P = P0 - R
@@ -140,7 +144,8 @@ def NFWX_DF(E,params):
         f[R>c] = p[R>c]/L[R>c]/d/d *(d*d*epsilon*(epsilon -1) - 2*d*epsilon*R[R>c] + R[R>c]*R[R>c] +d*(epsilon*d - R[R>c])*(2 - p[R>c]*R[R>c]**3/L[R>c]))
         return f
 
-    R = np.linspace(Rmin,Rmax,1e4)
+    R = np.linspace(Rmin,Rmax,int(1e4)).reshape(-1)
+    # print('linR:',R)
     P = NFWX_P(R,params)
     
     R = R[P<E]; P = P[P<E]

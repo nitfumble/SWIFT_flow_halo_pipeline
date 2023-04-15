@@ -26,6 +26,20 @@ def NFW_RootGuess(params):
     c = r_cut/r_s
     
     return c/10.0
+    
+
+def NFW_MF(R,params):
+#########################################################
+##Cummulative mass distribution for NFW profile
+#########################################################
+    r_s = params['r_s']
+    r_cut = params['r_cut']
+    c = r_cut/r_s
+    
+    MF =(log(R+1)-R/(R+1))/(log(c+1)-c/(c+1))
+    
+    return MF
+    
 
 def NFW_MD(R,x,params):
 #########################################################
@@ -39,6 +53,7 @@ def NFW_MD(R,x,params):
     MD = log(R+1)-R/(R+1)-x*(log(c+1)-c/(c+1))
 
     return MD
+    
 
 def NFW_P(R,params):
 #########################################################
@@ -67,13 +82,12 @@ def NFW_DF(E,params):
         P = log(R+1)/R
         p = 1.0/(R*(1+R)**2)
         f =  (p*R/(L*(1+R)))**2 * (6*L/p + R*(1+R)*(3*R+1))
-        Y = f / sqrt(E-P)
+        Y = f / np.sqrt(np.abs(E-P))
         return Y
 
-    F=integrate.quad(integrand,Rmin,inf,args=(E))[0]
+    F=integrate.quad(integrand,Rmin,inf,full_output=1,args=(E))[0]
 
     return F
-
 
 def NFW_dimens(R,V,n,m,G,params):
 #########################################################
@@ -108,14 +122,17 @@ def NFW_truncate(R,V,n,params):
     A = (log(1+c)-(c/(1+c)))/(1.0*n) #dimensionless mass per particle
     
     while (n_old>n_new):
+        ##Calculate potential, assuming spherical symmetry
         #Inside Potential
         R_sort, R_ind = np.unique(R, return_inverse=True) #sorted list without repeats, index
         par_int = (np.cumsum(np.concatenate(([0], np.bincount(R_ind)))))[R_ind] #number of interior particles
         P = par_int/R
         #Outside Potential
         count = Counter(R) # find repeated values
-        vals = np.array(count.values())
-        keys = np.array(count.keys())
+        vals = count.values() #number of repeats of value in keys
+        keys = count.keys()
+        vals = np.array(list(vals), dtype=float) #Convert to arrays
+        keys = np.array(list(keys), dtype=float)
         inds = keys.argsort()
         reps = vals[inds]
         R_out = reps[::-1] * 1/R_sort[::-1]

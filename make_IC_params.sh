@@ -16,33 +16,96 @@ else
 	rm -f parameterfile.txt
 fi
 
-echo "Model $1
+Total_mass=$(( 10 ** $3)) #120 #[10^10 M_Sun]
+num_particles=$2
+mass=$(awk "BEGIN {printf \"%.5f\",$Total_mass/$num_particles}")
+
+if [ $3 == 2 ]; then
+   echo "Model $1
 G 4.51846772E-29
-m 0.00014242566
-n $2
+m $mass
+n $num_particles
 
 #NFW
-r_s 15
-r_cut 200
+r_s 26
+r_cut 360
 truncate True
 
 #NFWX
-r_sX 15
-r_vir 250
-d 20
+r_sX 26
+r_vir 240.0
+d 12
 
-#Hernquist
-a 0.8
-
-#King
-P0 1.0
-r_t 230
+#Hernquist 
+a 18
 
 #Einasto
-r2 1.0
-alpha 0.15" > parameterfile.txt 
+alpha 0.16088252900385014
+r2 26
+
+#King
+P0 6
+r_t 250" > parameterfile.txt 
+	echo "The parameterfile is saved"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+elif [ $3 == 3 ]; then
+   echo "Model $1
+G 4.51846772E-29
+m $mass
+n $num_particles
+
+#NFW
+r_s 70
+r_cut 775
+truncate True
+
+#NFWX
+r_sX 70
+r_vir 520.0
+d 2
+
+#Hernquist 
+a 40
+
+#Einasto
+alpha 0.16718100650435025
+r2 69.6866
+
+#King
+P0 6
+r_t 520" > parameterfile.txt 
 echo "The parameterfile is saved"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+else
+	echo "Model $1
+G 4.51846772E-29
+m $mass
+n $num_particles
+
+#NFW
+r_s 220
+r_cut 1670
+truncate True
+
+#NFWX
+r_sX 220
+r_vir 1115
+d 2
+
+#Hernquist 
+a 105
+
+#Einasto
+alpha 0.18412102491714508
+r2 220
+
+#King
+P0 6
+r_t 1400.0" > parameterfile.txt 
+echo "The parameterfile is saved"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+fi
+
 
 # UNITS WE WILL USE:
 # Time [seconds]; Length [km]; Mass [Solar Masses];

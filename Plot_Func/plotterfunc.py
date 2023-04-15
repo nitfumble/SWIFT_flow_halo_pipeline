@@ -9,6 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import patches as pch
 from matplotlib.ticker import MultipleLocator
+np.random.seed(42069)
 
 #plt.rcParams.update({'axes.labelsize' : 20})
 #plt.rcParams.update({'axes.linewidth' : 2})
@@ -23,6 +24,53 @@ from matplotlib.ticker import MultipleLocator
 #plt.rcParams.update({'xtick.minor.width' : 1.2})
 #plt.rcParams.update({'ytick.minor.width' : 1.2})
 #plt.rcParams.update({'legend.fontsize' : 14})
+
+
+#PLOT PARAMS
+
+# Set the font size for axis labels and tick labels
+plt.rcParams['font.size'] = 18
+
+# Set the font family for all text in the plot
+plt.rcParams['font.family'] = 'serif'
+
+# Set the figure size to 6 x 4 inches
+plt.rcParams['figure.figsize'] = [6, 4]
+
+# Set the linewidth for lines in the plot
+plt.rcParams['lines.linewidth'] = 1.5
+
+# Set the color cycle for multiple lines in the same plot
+plt.rcParams['axes.prop_cycle'] = plt.cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#a55194'])
+
+# Set the tick direction to 'in'
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
+
+# Set the tick length to 4 points
+plt.rcParams['xtick.major.size'] = 4
+plt.rcParams['ytick.major.size'] = 4
+
+# Set the number of minor ticks between major ticks to 5
+plt.rcParams['xtick.minor.visible'] = True
+plt.rcParams['ytick.minor.visible'] = True
+plt.rcParams['xtick.minor.size'] = 2
+plt.rcParams['ytick.minor.size'] = 2
+plt.rcParams['xtick.minor.width'] = 0.5
+plt.rcParams['ytick.minor.width'] = 0.5
+plt.rcParams['xtick.minor.pad'] = 2.0
+plt.rcParams['ytick.minor.pad'] = 2.0
+plt.rcParams['xtick.minor.top'] = True
+plt.rcParams['ytick.minor.right'] = True
+plt.rcParams['xtick.minor.bottom'] = True
+plt.rcParams['ytick.minor.left'] = True
+
+# Set the default dpi of figures to 150
+plt.rcParams['figure.dpi'] = 150
+
+# Set the default file format to PDF
+plt.rcParams['savefig.format'] = 'pdf'
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -42,9 +90,9 @@ def plot3dhex(x,y,z,Gsize = 50):
                      gridsize=Gsize, bins='log', cmap='plasma',mincnt=1)
 
 
-    axs[0, 0].set(ylabel='y [Mpc]')
-    axs[1, 1].set(xlabel='y [Mpc]')
-    axs[1, 0].set(xlabel='x [Mpc]',ylabel='z [pc]')
+    axs[0, 0].set(ylabel='y [kpc]')
+    axs[1, 1].set(xlabel='y [kpc]')
+    axs[1, 0].set(xlabel='x [kpc]',ylabel='z [kpc]')
 
     axs[1][1].xaxis.set_tick_params(which='both', labelbottom=True, labeltop=False)
 
@@ -69,16 +117,16 @@ def plot3d_scat(x,y,z,col='black',Gsize = 50):
                      c=col,linewidth=1)
 
 
-    axs[0, 0].set(ylabel='y [Mpc]')
-    axs[1, 1].set(xlabel='y [Mpc]')
-    axs[1, 0].set(xlabel='x [Mpc]',ylabel='z [pc]')
+    axs[0, 0].set(ylabel='y [kpc]')
+    axs[1, 1].set(xlabel='y [kpc]')
+    axs[1, 0].set(xlabel='x [kpc]',ylabel='z [kpc]')
 
     #axs[0, 0].xaxis.set_minor_locator(MultipleLocator(2.5))
     #axs[1, 0].xaxis.set_minor_locator(MultipleLocator(2.5))
     #axs[1, 1].xaxis.set_minor_locator(MultipleLocator(25))
     #axs[1, 0].yaxis.set_minor_locator(MultipleLocator(25))
 
-    #axs[0, 0].legend(loc='best')
+    #axs[0, 0].legend(loc='upper left')
 
 
 
@@ -117,8 +165,8 @@ def plot3d_2scat(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,na
     axs[0, 0].add_patch(circle0m)
     axs[0, 0].add_patch(circle0c)
     
-    axs[0, 0].text(x=0.01, y=0.97,s=r'M$_{200,m}$= '+str(np.round(m200m,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=11,c='r', weight="bold", ha='left', va='center', transform=axs[0, 0].transAxes)
-    axs[0, 0].text(x=0.99, y=0.97,s=r'M$_{500,c}$= '+str(np.round(m500c,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=11,c='b', weight="bold", ha='right', va='center', transform=axs[0, 0].transAxes)
+    axs[0, 0].text(x=0.01, y=0.97,s=r'M$_{200,m}$= '+str(np.round(m200m,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=10,c='r', weight="bold", ha='left', va='center', transform=axs[0, 0].transAxes)
+    axs[0, 0].text(x=0.99, y=0.97,s=r'M$_{500,c}$= '+str(np.round(m500c,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=10,c='b', weight="bold", ha='right', va='center', transform=axs[0, 0].transAxes)
 
 
     axs[1, 0].plot(x,z,'.',
@@ -152,9 +200,9 @@ def plot3d_2scat(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,na
     axs[1, 0].set_ylim(lims)
     axs[1, 1].set_xlim(lims)
 
-    axs[0, 0].set(ylabel='y [Mpc/h]')
-    axs[1, 1].set(xlabel='y [Mpc/h]')
-    axs[1, 0].set(xlabel='x [Mpc/h]',ylabel='z [Mpc/h]')
+    axs[0, 0].set(ylabel='y [kpc/h]')
+    axs[1, 1].set(xlabel='y [kpc/h]')
+    axs[1, 0].set(xlabel='x [kpc/h]',ylabel='z [kpc/h]')
 
     axs[1][1].xaxis.set_tick_params(which='both', labelbottom=True, labeltop=False)
     
@@ -166,7 +214,7 @@ def plot3d_2scat(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,na
     #handlebox.add_artist(circle0m)
     
     legend = axs[0, 0].legend(#bbox_to_anchor=(0.5, 1.05),
-    loc='lower right',
+    loc='upper left',
     fancybox=True, shadow=True, borderpad=0.2,
     framealpha=0.4,facecolor='grey')
     
@@ -190,10 +238,12 @@ def plot3d_2scat(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,na
     
 def plot_evo(x,data1,dat1lab,data2,dat2lab,title,xlab,ylab,folder):
 	fig = plt.figure(figsize=(10,8))
-	plt.title(title)
+	#plt.title(title)
 	plt.plot(x,data1,'o-',alpha=0.4,c='b',label=dat1lab)
 	plt.plot(x,data2,'o-',alpha=0.4,c='r',label=dat2lab)
-	plt.legend(loc='best',fancybox=True, shadow=True)
+	plt.legend(loc='lower left',fancybox=True, shadow=True)
+	plt.tick_params(axis='both', which='minor', length=3, labelcolor='black',bottom=True, top=True, left=True, right=True)
+	plt.tick_params(axis='both', which='major', length=5, labelcolor='black',bottom=True, top=True, left=True, right=True)
 	plt.xlabel(xlab)
 	plt.ylabel(ylab)
 	plt.tight_layout()
@@ -207,7 +257,7 @@ def plot_evo(x,data1,dat1lab,data2,dat2lab,title,xlab,ylab,folder):
 
 
 
-def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,name,lims,title,
+def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,folder,name,lims,title,time,fbound,
 					rs,dens,Rlims,Denslims,dens_model=[],col='black',col1='orange',Gsize = 50):
 	fig4, axs = plt.subplots(2, 2,figsize=(10,10))
 	axs[1, 0].sharex(axs[0, 0])
@@ -242,8 +292,8 @@ def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,fold
 	axs[0, 0].add_patch(circle0m)
 	axs[0, 0].add_patch(circle0c)
 
-	axs[0, 0].text(x=0.01, y=0.97,s=r'M$_{200,m}$= '+str(np.round(m200m,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=11,c='r', weight="bold", ha='left', va='center', transform=axs[0, 0].transAxes)
-	axs[0, 0].text(x=0.99, y=0.97,s=r'M$_{500,c}$= '+str(np.round(m500c,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=11,c='b', weight="bold", ha='right', va='center', transform=axs[0, 0].transAxes)
+	axs[0, 0].text(x=0.01, y=0.97,s=r'M$_{200,m}$= '+str(np.round(m200m,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=10,c='r', weight="bold", ha='left', va='center', transform=axs[0, 0].transAxes)
+	axs[0, 0].text(x=0.99, y=0.97,s=r'M$_{500,c}$= '+str(np.round(m500c,1))+r'×10$^{10}$ M$_{\odot}$/h',fontsize=10,c='b', weight="bold", ha='right', va='center', transform=axs[0, 0].transAxes)
 
 	axs[0, 1].set_title(r"Density Profile")# ($M = {:.1e}$ M$_{{\odot}}$)".format(M * 1e10))
 
@@ -251,7 +301,8 @@ def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,fold
 
 	axs[0, 1].plot(rs, dens,c='black', label=r"Simulation")
 	axs[0, 1].plot(rs, dens,'.',ms=5,alpha=0.8,c='black', label=r"Simulation")
-
+	axs[0, 1].text(x=0.5, y=0.97,s=r't = '+str("{:.2f}".format(time))+' Gyr',fontsize=10,c='black', weight="bold", ha='center', va='center', transform=axs[0, 1].transAxes)
+	axs[0, 1].text(x=0.5, y=0.03,s=r'Bound %: '+"{:.2f}".format(fbound)+'%',fontsize=10,c='black', weight="bold", ha='center', va='center', transform=axs[0, 1].transAxes)
 	#ax[0].plot(rs, dens_model, label=r"Model",c='r',ls='-o')		
 
 	axs[0, 1].set_xlabel("r [kpc]")
@@ -290,9 +341,9 @@ def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,fold
 	axs[1, 0].set_ylim(lims)
 	axs[1, 1].set_xlim(lims)
 
-	axs[0, 0].set(ylabel='y [Mpc/h]')
-	axs[1, 1].set(xlabel='y [Mpc/h]')
-	axs[1, 0].set(xlabel='x [Mpc/h]',ylabel='z [Mpc/h]')
+	axs[0, 0].set(ylabel='y [kpc/h]')
+	axs[1, 1].set(xlabel='y [kpc/h]')
+	axs[1, 0].set(xlabel='x [kpc/h]',ylabel='z [kpc/h]')
 
 	axs[1][1].xaxis.set_tick_params(which='both', labelbottom=True, labeltop=False)
 
@@ -304,7 +355,7 @@ def plot3d_2scat_prof(x,y,z,x1,y1,z1,centre,radi_200m,m200m,radi_500c,m500c,fold
     #handlebox.add_artist(circle0m)
     
 	legend = axs[0, 0].legend(#bbox_to_anchor=(0.5, 1.05),
-	loc='lower right',
+	loc='upper left',
 	fancybox=True, shadow=True, borderpad=0.2,
 	framealpha=0.4,facecolor='grey')
 

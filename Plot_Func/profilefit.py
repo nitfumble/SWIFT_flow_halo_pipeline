@@ -25,6 +25,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 import scipy.optimize as sco
 import os
+np.random.seed(42069)
 
 output_foldername = str(sys.argv[1])
 #data_foldername = str(sys.argv[1])

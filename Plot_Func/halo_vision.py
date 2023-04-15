@@ -1,54 +1,82 @@
 # -*- coding: utf-8 -*-
 """@author: bart_"""
 ######################################################################
-from colossus.cosmology import cosmology
-from scipy.optimize import curve_fit
-from numba.np.ufunc import parallel
+from numba import prange,config,jit,njit, float64
 import matplotlib.pyplot as plt
 from plotterfunc import *
-from numba import prange,config,njit,vectorize,set_num_threads,get_num_threads
+import pandas as pd
 import numpy as np
 import h5py as h5
 import imageio
+import tables
 import sys
 import os
-config.THREADING_LAYER = 'tbb'
+
+h = 0.6766
+rho_m = 8.634164473613977e-09
+rho_c = 2.7753662724570803e-08
+
+config.THREADING_LAYER = 'omp'
 cpuCount = os.cpu_count()
-
+np.random.seed(42069)
 print("Number of CPUs in the system:", cpuCount)
-#set_num_threads(4)
-print("Number of CPUs used:", get_num_threads())
+plot_bool = str(sys.argv[2])
+if plot_bool == 'T':
+	plot_bool = True
+else:
+	plot_bool = False
+
+
+#PLOT PARAMS
+
+#  Set the font size for axis labels and tick labels
+plt.rcParams['font.size'] = 18
+
+# Set the font family for all text in the plot
+plt.rcParams['font.family'] = 'serif'
+
+# Set the figure size to 6 x 4 inches
+plt.rcParams['figure.figsize'] = [10, 8]
+
+# Set the linewidth for lines in the plot
+plt.rcParams['lines.linewidth'] = 1.5
+
+# Set the color cycle for multiple lines in the same plot
+plt.rcParams['axes.prop_cycle'] = plt.cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#a55194'])
+
+# Set the tick direction to 'in'
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
+
+# Set the tick length to 4 points
+plt.rcParams['xtick.major.size'] = 4
+plt.rcParams['ytick.major.size'] = 4
+
+# Set the number of minor ticks between major ticks to 5
+plt.rcParams['xtick.minor.visible'] = True
+plt.rcParams['ytick.minor.visible'] = True
+plt.rcParams['xtick.minor.size'] = 2
+plt.rcParams['ytick.minor.size'] = 2
+plt.rcParams['xtick.minor.width'] = 0.5
+plt.rcParams['ytick.minor.width'] = 0.5
+plt.rcParams['xtick.minor.pad'] = 2.0
+plt.rcParams['ytick.minor.pad'] = 2.0
+plt.rcParams['xtick.minor.top'] = True
+plt.rcParams['ytick.minor.right'] = True
+plt.rcParams['xtick.minor.bottom'] = True
+plt.rcParams['ytick.minor.left'] = True
+
+# Set the default dpi of figures to 150
+plt.rcParams['figure.dpi'] = 150
+
+# Set the default file format to PDF
+plt.rcParams['savefig.format'] = 'pdf'
+
+
 ######################################################################
-#%% 
+#%%  
 
-cosmo = cosmology.setCosmology('planck18')
-
-def model_NFW(r,M_tot):
-# Read the params from parameterfile.txt!
-	rs=params['r_s']
-	
-	
-	if params['truncate']:
-		rc=params['r_cut']
-	return
-	
-#def model_NFWX(): ICs not availible yet!
-#	return
-
-def model_Hernquist():
-	return
-
-def model_King():
-	return
-
-def model_Einasto():
-	return
-	
-	
-######################################################################
-#%% 
-
-paramfile = 'SwiftRUN_'+str(sys.argv[2])+'/parameterfile.txt' 
+paramfile = 'parameterfile.txt' 
 
 d = {} #create dictionary
 with open(paramfile) as f:
@@ -64,44 +92,47 @@ with open(paramfile) as f:
 				d[key] = False
 			else:
 				d[key] = float(val)
+
 model = d['Model']
-m = d['m']
 Grav_const = d['G']
 params = d
 
-data_foldername = 'SwiftRUN_'+model+'/'
-output_foldername = str(sys.argv[1])
+data_modelname = str(sys.argv[1])
+output_foldername = '../Figures/'
 filename = 'haloplot' 
 ######################################################################
 #%% 
 
-if not os.path.exists('Figures/images'):
-	os.mkdir('Figures/images')
+if not os.path.exists('../Figures/images'):
+	os.mkdir('../Figures/images')
 
-Nmax = 100
+files = os.listdir()
+Nmax = np.flatnonzero(np.core.defchararray.find(files,'output')!=-1).size -3
+Nmax_e =  np.flatnonzero(np.core.defchararray.find(files,'eject')!=-1).size -3
 steps = 1
 n_frames = 1
+iterarray = np.arange(0, Nmax, steps)
+iterarray_e = np.arange(0, Nmax_e, steps)
 
-endp = 100# np.int8(input('How many files?'))
-strings = [str(i) for i in np.arange(0,endp+1)]
+######################################################################
+#%% INCL. EJECT
 
-nams = np.char.zfill(strings,3)
-#fnames = [f'output_0{i}.hdf5' for i in nams]
-#f = [h5.File(f, "r") for f in fnames]
 
-iterarray = np.arange(0, Nmax + 1, steps)
-f = [h5.File(data_foldername+"output_%04d.hdf5" % i, "r") for i in iterarray]
+f = [h5.File("output_%04d.hdf5" % i, "r") for i in iterarray]
+Numpartz = np.array([np.array(i["PartType1"]["Coordinates"].shape[0]) for i in f], dtype=np.float64)
 
-coordinates_lists = [i["PartType1"]["Coordinates"] for i in f]
-masses = [i["PartType1"]["Masses"] for i in f]
-times = [i["Header"].attrs["Time"][0] * 
-          i["Units"].attrs["Unit time in cgs (U_t)"][0] / 31557600.0e9 for i in f]
+coordinates_lists = np.array([np.concatenate((np.array(i["PartType1"]["Coordinates"]),np.array([np.nan]*3*(np.int64(d['n']-i["PartType1"]["Coordinates"].shape[0]))).reshape(-1,3)),axis=0) for i in f], dtype=np.float64)
 
-velos_list = [i["PartType1"]["Velocities"] for i in f]
+masses = np.array([np.concatenate((np.array(i["PartType1"]["Masses"]),np.array([np.nan]*(np.int64(d['n']-i["PartType1"]["Masses"].shape[0]))).reshape(-1)),axis=0) for i in f], dtype=np.float64)
+
+times = np.array([np.array(i["Header"].attrs["Time"][0], dtype=np.float) * 
+          np.array(i["Units"].attrs["Unit time in cgs (U_t)"][0]) / 31557600.0e9 for i in f], dtype=np.float32)
+
+velos_list = np.array([np.concatenate((np.array(i["PartType1"]["Velocities"]),np.array([np.nan]*3*(np.int64(d['n']-i["PartType1"]["Velocities"].shape[0]))).reshape(-1,3)),axis=0) for i in f])
 
 #%% Parameters
 combine = True 					#input('Combine the Density & Mass Profiles in 1 subplot? (Y/N)')
-shift = np.array(f[0]["Header"].attrs["BoxSize"] / 2) 	#float(input('What is the shift'))
+shift = np.array(f[0]["Header"].attrs["BoxSize"] / 2, dtype=np.float16) 	#float(input('What is the shift'))
 #G = 4.299581e04 #??
 figsize = 10
 
@@ -111,208 +142,173 @@ ymin0 = 10**-13.2
 ymax0 = 10**-3.8
 ymin1 = np.array(masses[0]).min()*10**-.2
 ymax1 = np.array(masses[0]).sum()*10**.2
+R_max = np.linalg.norm(np.array(f[0]["Header"].attrs["BoxSize"], dtype=np.float16))
 
+[i.close() for i in f]
+del f
 
-#if combine == 'Y':
-#    combine = True
-#else:
-#    combine = False
+for iter_part_e in np.array_split(iterarray_e,np.ceil(iterarray_e.size/500)):
+	t_init = times[-1]
+	f_e = [h5.File("eject_%04d.hdf5" % i, "r") for i in iter_part_e]
 
-G = 4.299581e04
+	Numpartz = np.concatenate((Numpartz,[np.array(i["PartType1"]["Coordinates"].shape[0]) for i in f_e]),axis=0)
+
+	coordinates_lists = np.concatenate((coordinates_lists,[np.concatenate((np.array(i["PartType1"]["Coordinates"]),np.array([np.nan]*3*(np.int64(d['n']-i["PartType1"]["Coordinates"].shape[0]))).reshape(-1,3)),axis=0) for i in f_e]),axis=0)
+
+	masses = np.concatenate((masses,[np.concatenate((np.array(i["PartType1"]["Masses"]),np.array([np.nan]*(np.int64(d['n']-i["PartType1"]["Masses"].shape[0]))).reshape(-1)),axis=0) for i in f_e]),axis=0)
+
+	times = np.concatenate((times,t_init + [np.array(i["Header"].attrs["Time"][0]) * 
+		      np.array(i["Units"].attrs["Unit time in cgs (U_t)"][0]) / 31557600.0e9 for i in f_e]),axis=0)
+
+	velos_list = np.concatenate((velos_list,[np.concatenate((np.array(i["PartType1"]["Velocities"]),np.array([np.nan]*3*(np.int64(d['n']-i["PartType1"]["Velocities"].shape[0]))).reshape(-1,3)),axis=0) for i in f_e]),axis=0)
+
+	[i.close() for i in f_e]
+	del f_e
+
+G = 4.51846772E-29
 figsize = 10
 min_d,max_d = 0,0
 min_m,max_m = 0,0
 R_min = 1
-R_max = np.linalg.norm(np.array(f[0]["Header"].attrs["BoxSize"]))
 filenames1, filenames2 = [],[]
+
 #Fill each list with nans up to n
-filler = [np.int16(d['n']-np.array(fill).shape[0]) for fill in coordinates_lists]
-new_coords_list = np.array([np.concatenate((np.array(C),np.array([np.nan]*3*filler[x]).reshape(filler[x],3)),axis=0) for x,C in enumerate(coordinates_lists)])
-CoM = np.nanmean(new_coords_list,axis=1)
-new_velos_list = np.array([np.concatenate((np.array(C),np.array([np.nan]*3*filler[x]).reshape(filler[x],3)),axis=0) for x,C in enumerate(velos_list)])
-new_masses = np.array([np.concatenate((np.array(C),np.array([np.nan]*filler[x]).reshape(filler[x])),axis=0) for x,C in enumerate(masses)])
-CoV = np.nanmean(new_velos_list,axis=1)
-radius_particles = np.linalg.norm(np.array(new_coords_list)-shift,axis=-1)
-#radius_particles = np.array([np.linalg.norm(np.array(C)-shift,axis=-1) for C in new_coords_list])
-#max_radius = radius_particles.max(axis=0)
-
-CoV_inner_particles = np.nanmean(np.where(radius_particles[:,:,np.newaxis]<40,new_velos_list,np.nan),axis=1)
-
+CoM = np.nanmean(coordinates_lists,axis=1)
+CoV = np.nanmean(velos_list,axis=1)
+radius_particles = np.linalg.norm(np.array(coordinates_lists)-shift,axis=-1)
 nbsamples = 100
 Rmin = np.nanmin(radius_particles)
 Rmax = np.nanmax(radius_particles) #np.linalg.norm(np.array(f[0]["Header"].attrs["BoxSize"]))
+print(Rmax)
 rsp = np.logspace(np.log10(Rmin), np.log10(Rmax), nbsamples)
 max_radius = Rmax
-sort_r_particles = np.sort(radius_particles,axis=-1)
-dens_arr = m/(4/3*np.pi*sort_r_particles**3)
 
-	
 rar = np.linspace(0,Rmax,1000)
 
-#check = np.array([(sort_r_particles[sort_r_particles<r].size*m)/(4/3*np.pi*r**3) for r in rar])
-
-rho_c = 139.876577E-10 	#10^10 solar mass (kpc^(-3))
-Ω_m = 0.25
-rho_m = Ω_m*rho_c	#10^10 solar mass (kpc^(-3))
-
 # Methods to compute density profile
-M = new_masses[0,0]
+M = masses[0,0]
 r = radius_particles
-#mass = new_masses
+m = masses[0,0]
 mass = m 
-
-"""#mass_shells = np.array([((r < R) * mass).sum(axis=1) for R in rar])
-#mass_diff = np.diff(mass_shells,axis=0)
-#R_diff = np.diff(rar)
-
-q = np.array(mass_diff / R_diff[:, np.newaxis] / (4.0 * np.pi * rar[1:, np.newaxis] ** 2))
-
-q_mask = np.where(q > 0,q,np.nan)
-i0c, i1c = np.where(q_mask < 500*rho_c)
-i0m, i1m = np.where(q_mask < 200*rho_m)
-
-p1c = np.unique(i1c,return_index=True)
-p0c = i0c[p1c[1]]
-p1c = p1c[0]
-posc = np.array([p0c,p1c])
-r_500c= rar[p0c]
-
-p1m = np.unique(i1m,return_index=True)
-p0m = i0m[p1m[1]]
-p1m = p1m[0]
-posm = np.array([p0m,p1m])
-r_200m= rar[p0m]"""
 
 ######################################################################
 #%% CALCULATE DENSITY PROFILE
 
-
-def mass_ins(R):
-	return ((radii < R) * mass).sum(axis=-1)
+@njit(float64[:](float64[:], float64, float64[:], float64),fastmath=True)
+def calc_radial_density_profile(R, m, br, Rmax):
+	"""
+	Calculates the radial density profile of particles with positions
+	given by the array R, using a bin size dr and a maximum radius Rmax.
+	Returns an array with the radial density profile values at each radial
+	distance r_i from the origin, where r_i = (i + 0.5) * dr.
+	"""
+	# Compute the number of bins needed for the given parameters
+	Nbins = br.size
+	# Initialize an array to store the particle counts in each bin
+	counts = np.zeros(Nbins, dtype=np.float64)
+	# Loop over all particles and accumulate their counts in the appropriate bin
+	for i in range(R.shape[0]):
+		r = R[i]
+		if r >= Rmax:
+			continue
+		counts[np.where(r > br)[0][-1]] += 1
+	# Compute the volume of each shell
+	shell_volumes = 4 * np.pi / 3 * (br[1:]**3 - br[:-1]**3)
+	# Divide the counts by the shell volumes to get the radial density profile
+	density_profile = m * counts[1:] / shell_volumes
+	return density_profile
 	
-def density(R):
-	return np.diff(mass_ins_vect(R)) / np.diff(R) / (4.0 * np.pi * R[1:] ** 2)
+drad = 5
+densities = np.empty(shape=((Nmax+Nmax_e+2,int(np.ceil(Rmax/drad))-1)))
+binrange = np.logspace(-4,np.log10(Rmax),int(np.ceil(Rmax / drad)), dtype=np.float64)
 
-# Methods to compute density profile
-
-mass_ins_vect = np.vectorize(mass_ins)
-rs = rsp[1:]
-densities = np.empty(shape=((Nmax+1,rs.shape[0])))
 for cc, radii in enumerate(radius_particles):
-	densities[cc,:] = density(rsp)
+	densities[cc,:] = calc_radial_density_profile(radii, m, binrange, Rmax)
 
 # remove empty bins to nan
 densities = np.where(densities > 0, densities, np.nan)
+densities[densities < 1E-14] = np.nan
+densities[densities > 1E4] = np.nan
 Dmin = np.nanmin(densities)
 Dmax = np.nanmax(densities)
 
-#print(r_500c,r_200m)
-#print(r.min())
-#print(np.sum(r<r_500c[:,np.newaxis]*m,axis=1))
-#print(np.sum(r<r_200m[:,np.newaxis]*m,axis=1))
-#plt.loglog(rar[1:,np.newaxis],q)
-#plt.show()
+def find_radius_and_mass_at_density(R, m, denz):
+	"""
+	Uses the bisection method to find the radius at which a given density
+	`rho_target` is achieved to within a tolerance `tol`, given an array of
+	radii `R` and a maximum radius `Rmax`. Returns the radius and the mass
+	enclosed within the radius.
+	"""
+	a= np.nanmin(R)
+	b= np.nanmax(R)
+	R = R[~np.isnan(R)]
+	radius = np.sort(R)
+	while (b - a)/2.0 > 1E-12:
+		midpoint = (a + b)/2.0
+		partii = radius[radius <= midpoint]
+		volume = (4.0/3.0) * np.pi * midpoint**3
+		dens = m * partii.size / volume
+		if dens < denz: # Increasing but below 0 case
+			b = midpoint
+		else:
+			a = midpoint
 
-def dense(R2,Rlim):
-	mass = m*np.sum(R2<Rlim)
-	#print(mass/m,R2.size)
-	dens = mass/(4/3*np.pi*Rlim**3)
-	return dens,mass
+	#print(midpoint, m * partii.size)
+	return midpoint, m * partii.size
 
-def bisec(a, b, R2, val, tol):
-	if not (dense(R2,a)[0] > val and dense(R2,b)[0] < val):
-		return np.nan
-	else:
-		while (b - a)/2.0 > tol:
-			midpoint = (a + b)/2.0
-			D,M = dense(R2,midpoint)
-			if D < val: # Increasing but below 0 case
-				b = midpoint
-				mass = M
-			else:
-				a = midpoint
-		return(midpoint,mass)
-
-
-
-######################################################################
-#%% CALCULATE BOUND AND UNBOUND PARTICLES
-from numba import cuda
-
-#a_device = cuda.to_device(a)
-#b_device = cuda.to_device(b)
-#out_device = cuda.device_array(shape=(row,col,), dtype=np.float64)
-
-#@vectorize(['float64(float64, float64)'], target='cuda')
-#def fast_pot_E(x,y):
-	#return x**2 + y**2
-
-
-
-#@guvectorize([(float64[:],float64, float64[:])], '(n,m),(n,k)->(n)',nopython=True)
-#def net_vec(coord,res):
-#	for i in prange(c):
-#		res[i] = np.sum(coord - c[i])
-#		res[i] = np.sum(c-c[i],axis=0)/r.size
-		
-	
-
-@njit(parallel=True,fastmath=True)
-def pot_E(c):
+#@njit((float64[:],float64,float64(float64[:,:],float64[:,:],float64[:,:], float64[:,:], float64), parallel=True, fastmath=True)
+def bound_checker(m,v,c,r,v_com):
+	v_net = (v-v_com)
+	EK = 0.5*m*(v_net[:,0]**2+v_net[:,1]**2+v_net[:,2]**2)
+	c = c[~np.isnan(c)].reshape(-1,3)
 	potential = np.empty_like(c)
-		#pointer = m**2*np.nanmean((c-c[i]),axis=0)
-		#vec = pointer/np.linalg.norm(pointer)
-		#Shifted points with CoM:  (CoM[:,np.newaxis,:]-c)	 
-		#potential[i] = sum(coord_diff) / len(coord_diff)
-		#potential[i] = np.sum((c-c[i]),axis=0)
-		#print(i,end='\r')
 	for i in prange(c.shape[0]):
 		potential[i] = np.sum(c-c[i],axis=0)/c.shape[0]
-	#potential = net_vec(c)
-	potential = Grav_const*m**2*np.sqrt(potential[:,0]**2+potential[:,1]**2+potential[:,2]**2)
-	return potential
-
-pot_E.parallel_diagnostics(level=4)
-
-	
-
-def kin_E(m_part,v_part,v_com):
-	return 0.5*m_part*np.linalg.norm(v_part-v_com,axis=1)**2
-
-
-def bound_checker(m,v,c,r,v_com):#,masses,velo,Cosmology):
-	#implement cosmology later! Returns True/False array for each particle
-	EK = kin_E(m,v,v_com)
-	EP = pot_E(c)
-	print('EK',EK,'EP',EP)
+	EP = Grav_const*m**2*np.sqrt(potential[:,0]**2+potential[:,1]**2+potential[:,2]**2)
 	bound_states = np.where(EK<EP,True,False)
-	#bound_states = np.ones_like(radii, dtype=bool)
-	return np.array(bound_states)
-
+	return np.array(bound_states),np.sum(EK),np.sum(EP)
 
 ######################################################################
 #%% Calculating Overdensity Radii & Plotting
-rm_200m_list = []
-rm_500c_list = []
+rm_200m_m_list = []
+rm_200m_r_list = []
+rm_500c_m_list = []
+rm_500c_r_list = []
 timestep_list = []
+bound_perc_list = []
+kin_list = []
+pot_list = []
 filenamez = np.array([])
+Total_E = np.array([])
 nframes = 1
+
+f = h5.File("output_0000.hdf5", "r")
 
 for index, radii in enumerate(radius_particles):
 	framenr = index
 	timestep_list.append(times[index])
-	rm_500c = bisec(R_min,R_max,radii,500*rho_c,1E-13)
-	rm_500c_list.append(rm_500c)
-	rm_200m = bisec(R_min,R_max,radii,200*rho_m,1E-13)
-	rm_200m_list.append(rm_200m)
-	nan_mask = np.array(~np.isnan(radii))	#Ignoring the nans!
-	bound = bound_checker(masses[index][:][nan_mask],new_velos_list[index][:][nan_mask],new_coords_list[index][:][nan_mask]-CoM[index],radii[nan_mask],CoV[index]) 
-	print('\t Bound %= ',bound.sum()/bound.size*100,'%',end='\r')
-	filenamez = np.append(filenamez,np.array([output_foldername+'images/'+filename+str(framenr)]*nframes))
-	dens = density(rsp)
-	c = densities[index] > 0
-	dens = np.compress(c, densities[index])
-	rs_i = np.compress(c, rs)
+	rm_500c = find_radius_and_mass_at_density(radii, m, 500*rho_c)
+	rm_500c_r_list.append(rm_500c[0])
+	rm_500c_m_list.append(rm_500c[1])
+	rm_200m = find_radius_and_mass_at_density(radii, m, 200*rho_m)
+	rm_200m_r_list.append(rm_200m[0])
+	rm_200m_m_list.append(rm_200m[1])
+	if plot_bool:
+		nan_mask = np.array(~np.isnan(radii))	#Ignoring the nans!
+		#print(f'Bound calculation: {index}',end='\r') 
+		#bound,Kinetic_E,Potential_E = bound_checker(masses[index][:][nan_mask],velos_list[index][:][nan_mask],coordinates_lists[index][:][nan_mask]-CoM[index],radii[nan_mask],CoV[index])
+		#kin_list.append(Kinetic_E)
+		#pot_list.append(Potential_E)
+		#Total_E = np.append(Total_E,np.array([Kinetic_E,Potential_E]),axis=0)
+		bound = np.ones_like(coordinates_lists[index,:,0][nan_mask]) == 1
+		Bound_perc = bound.sum()/bound.size*100
+		bound_perc_list.append(Bound_perc)
+		print('\t Bound %= '+"{:.2f}".format(Bound_perc),'% | @ t = '+str(np.round(times[index],1))+' Gyr',end='\r')
+		filenamez = np.append(filenamez,np.array([output_foldername+'images/'+filename+str(framenr)]*nframes))
+		c = densities[index] > 0
+		dens = np.compress(c, densities[index])
+		rs_i = np.compress(c, np.diff(binrange))
+
 
 ######################################################################
 #%% CALCULATE THE 200M AND 500C MASS & RADII
@@ -330,15 +326,15 @@ for index, radii in enumerate(radius_particles):
 ######################################################################
 #%% PLOTTING THE FIGURE(S)
 
-	plot3d_2scat_prof(
+		plot3d_2scat_prof(
 	#Bound:
-		x=new_coords_list[index,:,0][bound],
-		y=new_coords_list[index,:,1][bound],
-		z=new_coords_list[index,:,2][bound],
+		x=coordinates_lists[index,:,0][nan_mask][bound],
+		y=coordinates_lists[index,:,1][nan_mask][bound],
+		z=coordinates_lists[index,:,2][nan_mask][bound],
 	#Unbound:
-		x1=new_coords_list[index,:,0][bound != True],
-		y1=new_coords_list[index,:,1][bound != True],
-		z1=new_coords_list[index,:,2][bound != True],
+		x1=coordinates_lists[index,:,0][nan_mask][bound != True],
+		y1=coordinates_lists[index,:,1][nan_mask][bound != True],
+		z1=coordinates_lists[index,:,2][nan_mask][bound != True],
 	#Sphereical Overdensity:
 		centre=CoM[index,:],
 		#(shift*2,shift*2),
@@ -347,36 +343,58 @@ for index, radii in enumerate(radius_particles):
 		radi_500c=rm_500c[0],
 		m500c=rm_500c[1],
 	#Plotting Info:
-		lims=[-0.1*np.array(f[0]["Header"].attrs["BoxSize"])[0], 1.1*np.array(f[0]["Header"].attrs["BoxSize"])[0]],
+		lims=[-0.1*np.array(f["Header"].attrs["BoxSize"])[0], 1.1*np.array(f["Header"].attrs["BoxSize"])[0]],
 		folder=output_foldername+'images/',
 		name=filename+str(framenr),
 		title='Spatial distribution of halo particles',
+		time=times[index],
+		fbound=Bound_perc,
 		rs=rs_i,
 		dens=dens,
-		Rlims=(Rmin,Rmax),
+		Rlims=(0.2*Rmin,Rmax),
 		Denslims=(Dmin,Dmax),
 		dens_model=[])
 
-rm_500c_array = np.array(rm_500c_list)
-rm_200m_array = np.array(rm_200m_list)
+#Bounds = np.array(bound_perc_list)
 timestep = np.array(timestep_list).ravel()
 
-plot_evo(timestep,rm_500c_array[:,0],r'R$_{500,c}$',rm_200m_array[:,0],r'R$_{200,m}$','Evolution of the overdensity radii','Time [Gyr]',r'Radius [kpc h$^{-1}$]',output_foldername)
-plot_evo(timestep,rm_500c_array[:,1],r'M$_{500,c}$',rm_200m_array[:,1],r'M$_{200,m}$','Evolution of the overdensity masses','Time [Gyr]',r'Mass [10$^{10}$ M$_{\odot}$ h$^{-1}$]',output_foldername)
+plot_evo(timestep,np.array(rm_500c_r_list),r'R$_{500c}$',np.array(rm_200m_r_list),r'R$_{200m}$',f'Evolution of the overdensity radii ({data_modelname})','Time [Gyr]',r'Radius $h^{-1}$ [kpc]',output_foldername)
+plot_evo(timestep,np.array(rm_500c_m_list),r'M$_{500c}$',np.array(rm_200m_m_list),r'M$_{200m}$',f'Evolution of the overdensity masses ({data_modelname})','Time [Gyr]',r'Mass $\times$ 10$^{10}$ $h^{-1}$ [M$_{\odot}$]',output_foldername)
 
+plot_evo(timestep,np.array(rm_500c_r_list)/np.array(rm_500c_r_list)[0],r'R$_{500c}$',np.array(rm_200m_r_list)/np.array(rm_200m_r_list)[0],r'R$_{200m}$',f'Ratio Evolution of the overdensity radii ({data_modelname})','Time [Gyr]','Ratio',output_foldername)
+plot_evo(timestep,np.array(rm_500c_m_list)/np.array(rm_500c_m_list)[0],r'M$_{500c}$',np.array(rm_200m_m_list)/np.array(rm_200m_m_list)[0],r'M$_{200m}$',f'Ratio Evolution of the overdensity masses ({data_modelname})','Time [Gyr]','Ratio',output_foldername)
 
 #sys.exit()
 
 ######################################################################
 #% Build GIF        
-print('creating gif density profile\n')
-with imageio.get_writer(output_foldername+'Overdensity region plot.gif', mode='I') as writer:
-	for fn in filenamez:
-		print('Loading: '+str(fn),end='\r')
-		ims = imageio.v2.imread(str(fn)+'.png')
-		writer.append_data(ims)
-		os.remove(fn+'.png')
-print('gif complete\n')
-print('Done!')
+if plot_bool:
+	print('creating gif density profile\n')
+	with imageio.get_writer(output_foldername+f'Overdensity region plot ({data_modelname}).gif', mode='I') as writer:
+		for fn in filenamez:
+			print('Loading: '+str(fn),end='\r')
+			ims = imageio.imread(str(fn)+'.png')
+			writer.append_data(ims)
+			os.remove(str(fn)+'.png')
 
+	print('gif complete\n')
+	print('Done!')
+
+
+dataset = pd.DataFrame({
+		'Times': np.array(timestep_list), 
+		'radi_200m': np.array(rm_200m_r_list), 
+		'm200m': np.array(rm_200m_m_list), 
+		'radi_500c': np.array(rm_500c_r_list), 
+		'm500c': np.array(rm_500c_m_list), 
+		#'Total_Energy': np.sum(Total_E,axis=1),
+		#'Potential_Energy': np.array(Total_E[:,1]), 
+		#'Kinetic_Energy': np.array(Total_E[:,0]), 
+		'Number_of_particles': Numpartz,
+		#'Bound_perc': Bounds,
+		})
+dataset.to_csv(f'../Results/Halo_vision ({data_modelname}).csv',index=False)
+
+
+############################################################################################
 

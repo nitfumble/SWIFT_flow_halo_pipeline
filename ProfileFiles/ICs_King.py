@@ -39,7 +39,7 @@ def King_Mass(R,params):
     Rt = params['Rt']
     xmax = max(R) # only have to integrate this far
     xmax = min(xmax,Rt) #make sure inside tidal radius
-    x = np.linspace(0.0,xmax,1e4)
+    x = np.linspace(0.0,xmax,int(1e4))
     y = King_density(x,params)*x*x #integrand
     Ls = integrate.cumtrapz(y,x,initial = 0) #Mass at x
     L = np.interp(R, x, Ls) #interpolate for mass at R
@@ -77,7 +77,7 @@ def King_Rt(params):
 ##Potential in an King profile
 #########################################################
     P0 = params['P0']
-    Rts = np.linspace(0.0,P0*10.0,1e4)
+    Rts = np.linspace(0.0,P0*10.0,int(1e4))
     PRt = King_P(Rts,params)
     while PRt[-1] > 0.0:
         Rts += Rts[-1]/2.0
@@ -110,7 +110,7 @@ def King_P(R,params):
         dy = np.array([dy1, dy2])
         return dy
     y0 = [P0,0.0]
-    x = np.linspace(0,max(R),1e6)
+    x = np.linspace(0,max(R),int(1e6))
     sol = integrate.odeint(f, y0, x, args=(a,))
     P = sol[:,0]
     P = np.interp(R, x, P) #interpolate for potential at R
